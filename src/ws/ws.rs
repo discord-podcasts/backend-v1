@@ -52,13 +52,13 @@ pub async fn websocket(
         if podcast.data.host != auth.client_id && podcast.data.active_since.is_none() {
             return PODCAST_INACTIVE.into_response();
         }
-        ws.on_upgrade(|socket| connected(socket, app, auth, podcast.data.id))
+        ws.on_upgrade(|socket| client_connect(socket, app, auth, podcast.data.id))
     });
 
     StatusCode::NOT_FOUND.into_response()
 }
 
-async fn connected(socket: WebSocket, app: Arc<App>, auth: Auth, podcast_id: u32) {
+async fn client_connect(socket: WebSocket, app: Arc<App>, auth: Auth, podcast_id: u32) {
     // Order of operations isn't good...
     println!("connected");
 
