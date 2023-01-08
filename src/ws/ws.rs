@@ -1,5 +1,9 @@
-use std::{borrow::BorrowMut, sync::Arc};
-
+use super::send_events::{Event, HelloEvent};
+use crate::{
+    auth::{validate_authentication_data, Auth},
+    podcast::PodcastQuery,
+    App,
+};
 use axum::{
     extract::{
         ws::{Message, WebSocket},
@@ -8,15 +12,8 @@ use axum::{
     http::{HeaderMap, StatusCode},
     response::IntoResponse,
 };
+use std::sync::Arc;
 use tokio::spawn;
-
-use crate::{
-    auth::{validate_authentication_data, Auth},
-    podcast::PodcastQuery,
-    App,
-};
-
-use super::send_events::{Event, HelloEvent};
 
 pub struct PodcastWsSession {
     pub client_id: u32,
