@@ -48,6 +48,7 @@ pub async fn websocket(
     };
 
     app.with_podcast(query.id, |podcast| {
+        // Non-host wants to connect to a non-active podcast
         if podcast.data.host != auth.client_id && podcast.data.active_since.is_none() {
             return PODCAST_INACTIVE.into_response();
         }
