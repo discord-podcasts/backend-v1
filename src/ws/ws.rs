@@ -57,29 +57,28 @@ pub async fn websocket(
 }
 
 async fn connected(socket: WebSocket, app: Arc<App>, auth: Auth, podcast_id: u32) {
+    // Order of operations isn't good...
     println!("connected");
 
-    let session = PodcastWsSession {
+    let mut session = PodcastWsSession {
         client_id: auth.client_id,
         socket,
     };
+
+    let port = app
+        .with_podcast(podcast_id, |podcast| podcast.audio_server.port)
+        .unwrap();
+    let hello_event = HelloEvent { port };
+    session.send(hello_event).await;
+
     app.with_podcast(podcast_id, |p| p.ws_sessions.push(session));
 
-    app.with_podcast(podcast_id, |podcast| {
-        &podcast.get_client_session(auth.client_id).unwrap().socket
-    });
+    spawn(async { listen(podcast_id, auth.client_id, app) });
+}
 
+async fn listen(podcast_id: u32, client_id: u32, app: Arc<App>) {
     app.on_podcast(podcast_id, async |podcast| {
-        let etest = podcast.data.clone();
-        //   let session = &podcast.get_client_session(auth.client_id).unwrap();
-        //  let port = podcast.audio_server.port;
-        //  let hello_event = HelloEvent { port };
-        //  session.send(hello_event).await;
+        let session = podcast.get_client_session(client_id).unwrap();
+        let recv = session.socket.recv().await;
     });
-
-    /*
-    spawn(async {
-        socket.recv().await;
-    });
-    */
 }
