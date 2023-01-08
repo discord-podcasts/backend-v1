@@ -31,6 +31,11 @@ impl PodcastWsSession {
     }
 }
 
+const PODCAST_INACTIVE: (StatusCode, &str) = (
+    StatusCode::BAD_REQUEST,
+    "Cannot connect to an inactive podcast",
+);
+
 pub async fn websocket(
     State(app): State<Arc<App>>,
     ws: WebSocketUpgrade,
@@ -42,18 +47,14 @@ pub async fn websocket(
         Err(err) => return err.into_response(),
     };
 
-    let podcast_data = app.with_podcast(query.id, |podcast| podcast.data.clone());
-
-    match podcast_data {
-        Some(podcast_data) => {
-            if podcast_data.host != auth.client_id && podcast_data.active_since.is_none() {
-                let err_msg = "Can't connect to an inactive podcast";
-                return (StatusCode::BAD_REQUEST, err_msg).into_response();
-            }
-            ws.on_upgrade(move |socket| connected(socket, app, auth, podcast_data.id))
+    app.with_podcast(query.id, |podcast| {
+        if podcast.data.host != auth.client_id && podcast.data.active_since.is_none() {
+            return PODCAST_INACTIVE.into_response();
         }
-        None => StatusCode::NOT_FOUND.into_response(),
-    }
+        ws.on_upgrade(|socket| connected(socket, app, auth, podcast.data.id))
+    });
+
+    StatusCode::NOT_FOUND.into_response()
 }
 
 async fn connected(socket: WebSocket, app: Arc<App>, auth: Auth, podcast_id: u32) {
